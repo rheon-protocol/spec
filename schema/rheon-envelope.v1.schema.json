@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/rheon-protocol/spec/main/schema/rheon-envelope.v1.schema.json",
+  "title": "Rheon Protocol v1 Envelope",
+  "description": "The required top-level envelope for a Rheon v1 NDJSON event. Payload fields beyond these four are allowed and interpreted via the Signal Registry.",
+  "type": "object",
+  "properties": {
+    "v": { "const": 1 },
+    "source": { "type": "string", "minLength": 1 },
+    "type": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "event": { "type": "string", "pattern": "^[a-z0-9-]+$" }
+  },
+  "required": ["v", "source", "type", "event"],
+  "additionalProperties": true
+}
