@@ -1,5 +1,7 @@
 # Rheon Protocol
 
+*rh protocol, for short.*
+
 A small, neutral contract for streaming meaningful events as **NDJSON** between tools.
 Producers and consumers depend on the protocol, not on each other: a shell's command
 journal, a file scanner, a sensor and a dashboard can all speak it without importing one
