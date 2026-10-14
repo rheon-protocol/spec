@@ -27,6 +27,7 @@ silently**.
 | [`spec/PROTOCOL_v1.md`](spec/PROTOCOL_v1.md) | The v1 specification: envelope, encoding, timestamps, the registry |
 | [`spec/CLI_PROFILE_v1.md`](spec/CLI_PROFILE_v1.md) | Optional profile for producers that are Unix commands: exit codes, closed pipes, `--limit`, unreadable input, the end-of-stream record |
 | [`spec/PIPE_MANIFEST_v1.md`](spec/PIPE_MANIFEST_v1.md) | How a tool declares itself (name, verbs, side effects) so that package managers and shells can install and run it |
+| [`spec/ACTOR_v1.md`](spec/ACTOR_v1.md) | Where the *who acted* fields get their values: observation first, one declared name (`AUDIT_ACTOR`), no vendor tables |
 | [`spec/validation.md`](spec/validation.md) | Reference validators |
 | [`registry/signals.v1.json`](registry/signals.v1.json) | The Signal Registry — known `type:event` pairs and their payload schemas |
 | [`schema/rheon-envelope.v1.schema.json`](schema/rheon-envelope.v1.schema.json) | JSON Schema for the required envelope |
