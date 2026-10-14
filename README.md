@@ -1,6 +1,6 @@
 # Rheon Protocol
 
-*rh protocol, for short.*
+*rh protocol, or rhp, for short.*
 
 A small, neutral contract for streaming meaningful events as **NDJSON** between tools.
 Producers and consumers depend on the protocol, not on each other: a shell's command
