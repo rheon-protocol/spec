@@ -21,7 +21,7 @@ must contain, and where the two of them live on a machine.**
 | | what it is | where it lives |
 |---|---|---|
 | **the binary** | a program that emits NDJSON. **It works without any of this** | `~/.local/bin` |
-| **the manifest** | the contract that builds `rheye(path).head(5)`. **Meaningless outside Rheon** | `~/.flux/manifests` |
+| **the manifest** | the contract that builds `rheye(path).head(5)`. **Meaningless outside Rheon** | `~/.rheon/manifests` (earlier `~/.flux/manifests`, still read while the new place does not exist) |
 
 ⭐ **This is why a package manager exists at all: to carry the declaration.** Someone who
 only wants the command drops the binary on `PATH` by hand and needs no manifest — which is

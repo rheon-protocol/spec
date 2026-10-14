@@ -1809,8 +1809,84 @@
         ]
       }
     },
+    "rheon:rewrite": {
+      "description": "hsh's Rheon mode (HSH_RHEON; HSH_FLUX is read too) rewrote a pipeline before running it (hsh journal). It records the shell's own act of rewriting, not the data the inserted stages emitted. The cmd record keeps the line as typed; this record puts the typed and the effective shapes side by side, because their difference is itself the fact. Written for every origin (interactive, -c, script, stdin) except inside internal structure (.hshrc, source, PROMPT_COMMAND) — the same boundary below which cmd and fs:source write nothing. One record per distinct rewrite per cmd: a loop that rewrites the same pipeline three times writes one record, so the number of rewrites is not recorded. Nothing about a rewrite is shown on screen; this record is where it is kept.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "typed": {
+            "type": "string",
+            "description": "The pipeline before the rewrite, rendered back from the parsed AST — whitespace is normalised, so it is not byte-for-byte what was typed. The literal typed line is the `cmd` of the cmd:run named by cmd_id."
+          },
+          "effective": {
+            "type": "string",
+            "description": "The pipeline that actually ran, rendered the same way, with the inserted stages in place and the original `!` restored."
+          },
+          "inserted": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "The stages the shell inserted, in pipeline order (e.g. [\"sig --no-journal\", \"unsig\"])."
+          },
+          "cwd": {
+            "type": "string",
+            "description": "Working directory at execution time"
+          },
+          "cwd_src": {
+            "type": "string",
+            "enum": ["undeclared"],
+            "description": "Present only when the host never declared a logical working directory, so cwd is the process's physical one rather than the path the user sees: the value is undeclared. Absent when the host declared it."
+          },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "interactive",
+              "command",
+              "script",
+              "stdin",
+              "unknown"
+            ],
+            "description": "How the shell was invoked (interactive REPL, -c, script file, stdin script)"
+          },
+          "origin_src": {
+            "type": "string",
+            "enum": ["undeclared"],
+            "description": "Present only when the host never declared how the shell was invoked, so origin fell back to unknown: the value is undeclared. Absent when declared."
+          },
+          "actor": {
+            "type": "string",
+            "description": "Who ran it (high-cardinality identity). An administrator-set name ($AUDIT_ACTOR) wins; then an agent that names itself in the environment (AI_AGENT, CLAUDE_CODE_ENTRYPOINT — normalised to its leading segment, e.g. claude-code); then $USER/$LOGNAME; else 'unknown'. The agent comes before the OS user so that an agent's work is not filed under a person's name. Older records may carry a name taken from $HSH_ACTOR."
+          },
+          "actor_kind": {
+            "type": "string",
+            "enum": [
+              "human",
+              "agent",
+              "ci",
+              "service",
+              "unknown"
+            ],
+            "description": "Low-cardinality classification of actor for aggregation. A host setting it per pane wins; then 'agent' if an agent names itself in the environment; then 'ci' if $CI is truthy; else the field is absent. Every value is a claim someone makes. 'unknown' and 'human' are retired and no longer emitted; older records may carry them, which is why the enum keeps them. Who was actually present is carried by observers instead: attach records (from socket peer credentials) and uid / auid on session:start."
+          },
+          "cmd_id": {
+            "type": ["string", "null"],
+            "description": "The id of the innermost cmd:run this rewrite happened in, to join the two. null when no command span was open on that thread."
+          },
+          "ts": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the rewrite happened, on the producer's clock (before the rewritten pipeline ran). See spec/PROTOCOL_v1.md 2.05."
+          },
+          "dialect": {
+            "type": "string",
+            "enum": ["bash", "sh", "hermes"],
+            "description": "Which dialect executed the line. See cmd:run.dialect for the full contract."
+          }
+        },
+        "required": ["typed", "effective", "inserted"]
+      }
+    },
     "flux:rewrite": {
-      "description": "hsh's Flux mode (HSH_FLUX) rewrote a pipeline before running it (hsh journal). It records the shell's own act of rewriting, not the data the inserted stages emitted. The cmd record keeps the line as typed; this record puts the typed and the effective shapes side by side, because their difference is itself the fact. Written for every origin (interactive, -c, script, stdin) except inside internal structure (.hshrc, source, PROMPT_COMMAND) — the same boundary below which cmd and fs:source write nothing. One record per distinct rewrite per cmd: a loop that rewrites the same pipeline three times writes one record, so the number of rewrites is not recorded. Nothing about a rewrite is shown on screen; this record is where it is kept.",
+      "description": "The earlier name of rheon:rewrite. Older records spell it flux:rewrite; the payload is the same.",
       "schema": {
         "type": "object",
         "properties": {
@@ -3482,7 +3558,7 @@
       }
     },
     "pipeline:accepted": {
-      "description": "`hsh --check-flux-pipe` accepted the pipeline: only declared pipes (and sig / unsig) joined by `|`, with plain arguments. A runner asks this before running it.",
+      "description": "`hsh --check-rheon-pipe` accepted the pipeline: only declared pipes (and sig / unsig) joined by `|`, with plain arguments. A runner asks this before running it.",
       "schema": {
         "type": "object",
         "properties": {
@@ -3502,7 +3578,7 @@
       }
     },
     "pipeline:refused": {
-      "description": "`hsh --check-flux-pipe` refused the pipeline, saying which stage and why.",
+      "description": "`hsh --check-rheon-pipe` refused the pipeline, saying which stage and why.",
       "plain": "refused: {detail}",
       "schema": {
         "type": "object",
@@ -3535,7 +3611,7 @@
       }
     },
     "var:observed": {
-      "description": "One variable, as it was when observed. rheon-env reports the process environment -- what a child process receives; flux-set (an hsh builtin) reports the shell's own variables, exported or not, in the order set lists them. value null means the value was withheld (redacted), never an empty or missing value.",
+      "description": "One variable, as it was when observed. rheon-env reports the process environment -- what a child process receives; rheon-set (an hsh builtin) reports the shell's own variables, exported or not, in the order set lists them. value null means the value was withheld (redacted), never an empty or missing value.",
       "plain": "{name}={value?<redacted>}",
       "schema": {
         "type": "object",
@@ -3543,7 +3619,7 @@
           "name": { "type": "string" },
           "value": {
             "type": ["string", "null"],
-            "description": "The raw value. For an array (flux-set), the spelling set uses, e.g. ([0]=\"a\" [1]=\"b\"); its contents are in elements. null only when redacted."
+            "description": "The raw value. For an array (rheon-set), the spelling set uses, e.g. ([0]=\"a\" [1]=\"b\"); its contents are in elements. null only when redacted."
           },
           "shape": {
             "type": "string",
@@ -3551,17 +3627,17 @@
             "description": "Both producers write it: rheon-env always scalar, since an environment variable has no arrays."
           },
           "elements": {
-            "description": "flux-set, arrays only: an indexed array's values in index order (an array), or an associative array's pairs (an object). Absent when redacted."
+            "description": "rheon-set, arrays only: an indexed array's values in index order (an array), or an associative array's pairs (an object). Absent when redacted."
           },
           "indices": {
             "type": "array",
             "items": { "type": "integer" },
-            "description": "flux-set: the indices of a sparse indexed array (absent when they are 0..n-1)."
+            "description": "rheon-set: the indices of a sparse indexed array (absent when they are 0..n-1)."
           },
           "attrs": {
             "type": "array",
             "items": { "type": "string" },
-            "description": "Both producers write it. flux-set: exported, readonly, integer, nameref, uppercase, lowercase, capitalize. rheon-env: always [\"exported\"] -- what a child receives is exported by definition."
+            "description": "Both producers write it. rheon-set: exported, readonly, integer, nameref, uppercase, lowercase, capitalize. rheon-env: always [\"exported\"] -- what a child receives is exported by definition."
           },
           "list": {
             "type": ["array", "null"],
@@ -3585,7 +3661,7 @@
       }
     },
     "function:observed": {
-      "description": "One shell function, as it was when observed (flux-set, an hsh builtin). Not emitted in sh mode (hsh --sh), where set lists variables only.",
+      "description": "One shell function, as it was when observed (rheon-set, an hsh builtin). Not emitted in sh mode (hsh --sh), where set lists variables only.",
       "plain": "{body}",
       "schema": {
         "type": "object",
