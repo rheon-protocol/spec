@@ -111,7 +111,8 @@ from `id` and the platform instead — a repo-relative path means nothing once d
 tool that installs tools cannot itself require an interpreter the machine may not have.
 
 Optional and free to omit: `version`, `author`, `license`, `tags`, `usage`, `category`,
-`notes`, `min_hsh_version`, `platforms`, `side_effects`, `secret_flags`, `replaces`, `$schema`.
+`notes`, `min_hsh_version`, `platforms`, `side_effects`, `secret_flags`, `replaces`, `rheon`, `observes`,
+`$schema`.
 
 ### `side_effects` — what running the pipe changes
 
@@ -125,6 +126,31 @@ non-empty declaration and a missing one. Otherwise a tool that writes — a pack
 whose declaration simply lacks the field is accepted as a reader, and its writing commands can be
 run through such a runner. ⭐ The field is optional for a reader of manifests, but a pipe that wants
 to be run by such a runner must write it — the same rule as `verbs` (write `[]`, do not omit).
+
+### `rheon` — a pipe that speaks the protocol behind a flag
+
+Some pipes are drop-in replacements for a classic command and answer **in that command's own format
+by default** — a search that prints `rg`'s plain lines — and print Rheon records only when asked.
+Such a pipe declares **no `category`** (by default it neither eats nor emits records, so a runner
+must not wrap it as one) and names the flag instead:
+
+```json
+"rheon": { "flag": "--rheon", "category": ["source", "filter"] }
+```
+
+- `flag` is the argument that turns records on. With it, the pipe is a producer of this protocol and
+  is held to the same rules as any other (CLI_PROFILE): a conformance checker measures it **with the
+  flag**.
+- `category` is where the pipe stands **with the flag**, in the same words as the top-level field.
+- A runner that inserts stages around declared producers (wrapping text, unwrapping records) reads
+  the top-level `category` only, and so leaves the pipe alone unless the flag is written.
+
+### `observes` — a pipe whose input is the present
+
+An array of words naming what the pipe observes, e.g. `["clock"]` (the time) or `["system"]` (load,
+memory, processes). Such a pipe's values change from run to run by design, and it implements
+`--snapshot FILE` and `--from FILE` (CLI_PROFILE §2.5) so that the observation can be fixed: a
+conformance checker takes one snapshot, then measures every rule with `--from`.
 
 ### `replaces` — the names this pipe takes over when it is renamed
 

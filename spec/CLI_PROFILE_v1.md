@@ -138,6 +138,20 @@ Non-deterministic output cannot be diffed, so it cannot be regression-tested —
 "different every time but always correct" means nobody notices when it stops
 being correct.
 
+**A producer that observes the present** — the clock, the system's state — gets a
+different input on every run, so its values differ by design. It does not get an
+exception from this rule; it makes the observation an input instead:
+
+- `--snapshot FILE` — observe as usual, print as usual, and also write what was
+  observed (the records printed, terminator included) to `FILE`.
+- `--from FILE` — do not observe: read an observation written by `--snapshot` and
+  print it as if it had just been made (any selection the arguments ask for applies
+  as usual; the terminator keeps the observation's own time).
+
+With `--from`, this rule holds as written: the same observation and the same
+arguments give the same bytes. The manifest says the pipe observes (`observes`,
+PIPE_MANIFEST v1), so a checker knows to fix the observation before it compares.
+
 ### 2.6 Do not wait for a human
 
 If the command would prompt and stdin is not a terminal, it must **fail with a
@@ -291,7 +305,7 @@ definition, not this one.
      cmd --nonsense-flag          → exit 2
 2.3  cmd … | wc -l                → every line parses as JSON
 2.4  compare the count emitted against the population, if the tool narrowed
-2.5  run twice, diff              → identical
+2.5  run twice, diff              → identical (an observer: --snapshot once, then --from)
 2.6  cmd < /dev/null              → returns; does not hang
 2.7  cmd > /dev/full              → non-zero
 2.8  cmd <an input it rejects>    → non-zero **and** stdout empty
