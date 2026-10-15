@@ -84,10 +84,12 @@ because `modified` reads as "when it was made".
   half a million records in three seconds writes the same value on every line —
   and a collector's `rx_ts` then supplies the floor.
 
-**Format**: RFC 3339 with an explicit offset. Precision is the producer's
-choice. ⚠️ It currently varies (seconds, milliseconds, microseconds across
-producers on one fleet), so **records from different producers can tie**; do not
-order a merged stream on time alone.
+**Format**: RFC 3339 with an explicit offset. A producer **SHOULD** write
+microseconds — six fractional digits, `2026-10-15T17:35:46.581772+09:00`: fine
+enough to keep one producer's events apart, and every platform's clock gives it.
+⚠️ Records written before this line vary (seconds, milliseconds, microseconds),
+and different producers' clocks are not one clock, so **records from different
+producers can tie or cross**; do not order a merged stream on time alone.
 
 ### 2.05.3 Reading across producers, while the names are still mixed
 
@@ -110,6 +112,34 @@ Producers that write an emission time use `ts`. Earlier records may carry
 permanent. Renaming `file:*.modified` (an object's mtime) to `mtime` is deferred: it
 would resolve only the created-vs-modified misreading, which §2.05.1 already
 addresses in prose.
+
+## 2.06 Paths — one separator
+
+`path` is the field nearly every producer writes and v1 never specified. Like
+§2.05 this section **adds no field and makes nothing non-conforming**; it says how
+to spell the value so that records from different producers and platforms can be
+matched, compared and joined.
+
+- A producer that writes a filesystem path in `path` **SHOULD** separate its
+  components with `/` — **on Windows too** (`./sub/a.txt`, `C:/Users/x/a.txt`).
+  The consumers of these records match paths with `/`: `grep '/target'`,
+  `find -path '*/sub'`, glob patterns, and a person at a POSIX shell, where `\` is
+  an escape character. Windows accepts `/` as a separator, so the value still
+  opens the file. A path spelled two ways cannot be compared, and a path spelled
+  with both (`C:/x\a.txt`) matches neither way.
+- A relative path is relative to the producer's working directory, and the part
+  the caller named keeps the spelling they gave it, separators aside: asked about
+  `sub`, a producer writes `sub/a.txt`; asked about `.`, `./a.txt`. It is not
+  rewritten from a project root, nor made absolute or relative on the producer's
+  own initiative. A producer whose paths are always absolute (so that a record can
+  be used from anywhere) **SHOULD** say so in its documentation.
+- A transform passing a record on **SHOULD NOT** rewrite the upstream's `path`:
+  it is the upstream's fact, as `ts` is (§2.05.2).
+- A consumer **SHOULD** accept `\` as a separator in records from Windows
+  producers written before this section.
+
+This is about the `path` field of records. A command whose plain output imitates
+another program's prints what that program prints there.
 
 ## 2.1 Encoding, and what to do with bytes that do not fit
 
