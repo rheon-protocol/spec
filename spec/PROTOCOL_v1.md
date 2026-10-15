@@ -84,9 +84,10 @@ because `modified` reads as "when it was made".
   half a million records in three seconds writes the same value on every line —
   and a collector's `rx_ts` then supplies the floor.
 
-**Format**: RFC 3339 with an explicit offset. A producer **SHOULD** write
-microseconds — six fractional digits, `2026-10-15T17:35:46.581772+09:00`: fine
-enough to keep one producer's events apart, and every platform's clock gives it.
+**Format**: RFC 3339 with an explicit offset. A producer **SHOULD** write at
+least microseconds — six fractional digits or more,
+`2026-10-15T17:35:46.581772+09:00`: fine enough to keep one producer's events
+apart, and every platform's clock gives it.
 ⚠️ Records written before this line vary (seconds, milliseconds, microseconds),
 and different producers' clocks are not one clock, so **records from different
 producers can tie or cross**; do not order a merged stream on time alone.
