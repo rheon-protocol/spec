@@ -3177,7 +3177,7 @@
       }
     },
     "line:matched": {
-      "description": "One line of a file matched a pattern (rheon-grep). The plain form is grep -rn's path:line:text. Older records may carry match:found.",
+      "description": "One line of a file matched a pattern (rheon-grep --rheon). The plain form is rg -n's path:line:text. Older records may carry match:found.",
       "plain": "{path}:{line}:{text}",
       "schema": {
         "type": "object",
@@ -3185,13 +3185,26 @@
           "path": { "type": "string" },
           "line": { "type": "integer", "description": "1-based line number." },
           "text": { "type": "string", "description": "The line as it is in the file, without its line ending (not trimmed)." },
-          "context": { "type": "array", "items": { "type": "string" }, "description": "Surrounding lines, `  N| text`; the match itself is `> N| text`." }
+          "context": { "type": "array", "items": { "type": "string" }, "description": "Surrounding lines, `  N| text`; the match itself is `> N| text`." },
+          "scope": { "type": "array", "description": "With --scope: the definitions around the match, outermost first. Absent when not asked for, or when the file's language has no grammar.", "items": { "type": "object", "properties": { "kind": { "type": "string", "description": "fn / impl / struct / enum / trait / mod / def / class / function / method / interface / ..." }, "name": { "type": "string" }, "start": { "type": "integer", "description": "1-based first line." }, "end": { "type": "integer", "description": "1-based last line." } }, "required": ["kind", "name", "start", "end"] } }
         },
         "required": ["path", "line", "text"]
       }
     },
+    "count:matched": {
+      "description": "How many lines of one file matched a pattern (rheon-grep --rheon -c). Files with no match are left out, as rg -c does.",
+      "plain": "{path}:{count}",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string" },
+          "count": { "type": "integer", "description": "Matching lines (a line with several matches counts once)." }
+        },
+        "required": ["path", "count"]
+      }
+    },
     "file:matched": {
-      "description": "A file whose path fuzzily matched a query (rheon-find). Older records may carry match:found.",
+      "description": "A file that matched: its path fuzzily matched a query (rheon-find, with text and score), or its content matched a pattern (rheon-grep --rheon -l, path only). Older records may carry match:found.",
       "plain": "{path}",
       "schema": {
         "type": "object",
@@ -3199,6 +3212,17 @@
           "path": { "type": "string" },
           "text": { "type": "string", "description": "The file name (last component) -- not a line of content." },
           "score": { "type": "integer", "description": "Fuzzy match score; results come highest first." }
+        },
+        "required": ["path"]
+      }
+    },
+    "file:unmatched": {
+      "description": "A file with no line matching the pattern (rheon-grep --rheon --files-without-match).",
+      "plain": "{path}",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string" }
         },
         "required": ["path"]
       }
@@ -4888,6 +4912,201 @@
         },
         "required": [
           "session"
+        ]
+      }
+    },
+    "replace:planned": {
+      "description": "A match rheon-replace would replace (run without --apply, or a refused run showing where the matches are). Nothing was written.",
+      "plain": "{path}:{line}: {before} -> {after}",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "line": {
+            "type": "integer",
+            "description": "1-based line where the match starts"
+          },
+          "column": {
+            "type": "integer",
+            "description": "1-based, in characters"
+          },
+          "before": {
+            "type": "string",
+            "description": "the whole lines the match touches, as they are"
+          },
+          "after": {
+            "type": "string",
+            "description": "the same lines with this match replaced (other matches on them left as they are)"
+          }
+        },
+        "required": [
+          "path",
+          "line",
+          "column",
+          "before",
+          "after"
+        ]
+      }
+    },
+    "replace:applied": {
+      "description": "A match rheon-replace replaced and wrote (--apply). Said only after the file was written.",
+      "plain": "{path}:{line}: {after}",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "line": {
+            "type": "integer",
+            "description": "1-based line where the match starts"
+          },
+          "column": {
+            "type": "integer",
+            "description": "1-based, in characters"
+          },
+          "before": {
+            "type": "string",
+            "description": "the whole lines the match touches, as they are"
+          },
+          "after": {
+            "type": "string",
+            "description": "the same lines with this match replaced (other matches on them left as they are)"
+          }
+        },
+        "required": [
+          "path",
+          "line",
+          "column",
+          "before",
+          "after"
+        ]
+      }
+    },
+    "replace:skipped": {
+      "description": "A file rheon-replace left alone; its matches are not counted.",
+      "plain": "{path}: skipped ({reason})",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "not-utf8"
+            ]
+          }
+        },
+        "required": [
+          "path",
+          "reason"
+        ]
+      }
+    },
+    "replace:refused": {
+      "description": "rheon-replace found a number of matches other than expected and wrote nothing. Ends a refused run in place of the terminator (exit 1).",
+      "plain": "refused: found {found}, expected {expected}",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": [
+              "no-match",
+              "count"
+            ]
+          },
+          "expected": {
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "the --expect count, or \"at least 1\" for --all"
+          },
+          "found": {
+            "type": "integer"
+          },
+          "hint": {
+            "type": "string",
+            "description": "why it may have matched nothing: --old would match with the other line ending (LF vs CRLF). Absent when there is nothing to say."
+          }
+        },
+        "required": [
+          "reason",
+          "expected",
+          "found"
+        ]
+      }
+    },
+    "replace:failed": {
+      "description": "rheon-replace could not read or write a file. Ends the run in place of the terminator (exit 1). A file that cannot be read stops the run before anything is decided (one record per file, nothing written). On a write, the files written before it are replace:applied, the rest replace:planned.",
+      "plain": "failed: {path}: {error}",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": [
+              "read",
+              "write"
+            ]
+          },
+          "path": {
+            "type": "string",
+            "description": "the file the read or write stopped at"
+          },
+          "error": {
+            "type": "string"
+          },
+          "replaced": {
+            "type": "integer",
+            "description": "how many files were already written before it stopped"
+          }
+        },
+        "required": [
+          "reason",
+          "path",
+          "error",
+          "replaced"
+        ]
+      }
+    },
+    "replace:unchanged": {
+      "description": "A match whose replacement leaves its file as it is (--new equal to what it replaces). The file is not rewritten, with or without --apply.",
+      "plain": "{path}:{line}: unchanged",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "line": {
+            "type": "integer",
+            "description": "1-based line where the match starts"
+          },
+          "column": {
+            "type": "integer",
+            "description": "1-based, in characters"
+          },
+          "before": {
+            "type": "string",
+            "description": "the whole lines the match touches, as they are"
+          },
+          "after": {
+            "type": "string",
+            "description": "the same lines with this match replaced (other matches on them left as they are)"
+          }
+        },
+        "required": [
+          "path",
+          "line",
+          "column",
+          "before",
+          "after"
         ]
       }
     }
