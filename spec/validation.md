@@ -6,7 +6,7 @@ Both implementations do the same thing in the same order:
 2. require top-level `v`, `source`, `type`, `event`
 3. require `v == 1`
 4. check `type` / `event` format
-5. look up `type:event` in the registry
+5. look up `type:event` in the registry (a retired name resolves to its `replaced_by`, PROTOCOL_v1 §6.2)
 6. require the schema's `required` fields
 7. otherwise warn / ignore (unknown signal → continue; unknown fields → allowed)
 
@@ -43,6 +43,8 @@ def validate_line(line: str, registry: dict) -> None:
     if sig is None:
         print(f"warning: unknown signal: {t}:{e}")         # 7 (continue)
         return
+    if "replaced_by" in sig:                               # retired name (§6.2)
+        sig = registry["signals"][sig["replaced_by"]]
     for req in sig.get("schema", {}).get("required", []):  # 6
         if req not in v:
             raise ValueError(f"missing required field: {req}")
@@ -59,7 +61,10 @@ fn validate_line(line: &str, reg: &Registry) -> Result<(), String> {
     if v["v"] != 1 { return Err("unsupported version".into()); }
     let (t, e) = (v["type"].as_str().ok_or("type")?, v["event"].as_str().ok_or("event")?);
     if !is_valid_ident(t) || !is_valid_ident(e) { return Err(format!("invalid format: {t}:{e}")); }
-    match reg.signals.get(&format!("{t}:{e}")) {
+    // A retired name resolves to its `replaced_by` (PROTOCOL_v1 §6.2).
+    let sig = reg.signals.get(&format!("{t}:{e}"))
+        .map(|s| s.replaced_by.as_ref().and_then(|n| reg.signals.get(n)).unwrap_or(s));
+    match sig {
         None => { eprintln!("warning: unknown signal: {t}:{e}"); Ok(()) }   // continue
         Some(s) => {
             for req in &s.required {

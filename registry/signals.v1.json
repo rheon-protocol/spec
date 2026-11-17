@@ -70,10 +70,15 @@
           "bytes_written": {
             "type": "integer"
           },
+          "ts": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When rheon-write wrote the record (spec PROTOCOL_v1 2.05). RFC 3339, six fractional digits, Z."
+          },
           "timestamp": {
             "type": "string",
             "format": "date-time",
-            "description": "rheon-write: when the record was written (spec 2.05)."
+            "description": "Legacy spelling of `ts` (rheon-write before 2026-11). No longer emitted; kept so archived records still parse. See spec/PROTOCOL_v1.md 2.05."
           }
         },
         "required": [
@@ -206,7 +211,7 @@
           },
           "actor": {
             "type": "string",
-            "description": "Who ran it (high-cardinality identity). An administrator-set name (AUDIT_ACTOR) wins; then an agent that names itself in the environment (AI_AGENT, CLAUDE_CODE_ENTRYPOINT, normalised to its leading segment, e.g. claude-code); then $USER/$LOGNAME; else 'unknown'. The agent comes before the OS user so that an agent's work is not filed under the human's name."
+            "description": "Who ran it (high-cardinality identity). An administrator-set name (AUDIT_ACTOR) wins; then an agent that names itself in the environment (AI_AGENT, normalised to its leading segment, e.g. claude-code); then $USER/$LOGNAME; else 'unknown'. The agent comes before the OS user so that an agent's work is not filed under the human's name."
           },
           "actor_kind": {
             "type": "string",
@@ -313,7 +318,7 @@
           },
           "actor": {
             "type": "string",
-            "description": "Who ran it (high-cardinality identity). An administrator-set name (AUDIT_ACTOR) wins; then an agent that names itself in the environment (AI_AGENT, CLAUDE_CODE_ENTRYPOINT, normalised to its leading segment, e.g. claude-code); then $USER/$LOGNAME; else 'unknown'. The agent comes before the OS user so that an agent's work is not filed under the human's name."
+            "description": "Who ran it (high-cardinality identity). An administrator-set name (AUDIT_ACTOR) wins; then an agent that names itself in the environment (AI_AGENT, normalised to its leading segment, e.g. claude-code); then $USER/$LOGNAME; else 'unknown'. The agent comes before the OS user so that an agent's work is not filed under the human's name."
           },
           "actor_kind": {
             "type": "string",
@@ -835,7 +840,7 @@
               "logname",
               "unknown"
             ],
-            "description": "Where the actor string on this session's records came from, mirroring the resolution order: explicit (a host set it per pane), audit_actor (AUDIT_ACTOR — the name an administrator sets), agent (a tool's self-declaration: AI_AGENT, CLAUDE_CODE_ENTRYPOINT), user / logname (the OS login name), unknown. Older records may carry hsh_actor (the retired HSH_ACTOR). This separates a claim from an observation: a caller declaring a name reads audit_actor, while a plain login reads user — so an impersonation marks itself."
+            "description": "Where the actor string on this session's records came from, mirroring the resolution order: explicit (a host set it per pane), audit_actor (AUDIT_ACTOR — the name an administrator sets), agent (a tool's self-declaration: AI_AGENT), user / logname (the OS login name), unknown. Older records may carry hsh_actor (the retired HSH_ACTOR). This separates a claim from an observation: a caller declaring a name reads audit_actor, while a plain login reads user — so an impersonation marks itself."
           },
           "ver": {
             "type": "string",
@@ -865,7 +870,7 @@
           },
           "actor": {
             "type": "string",
-            "description": "Who ran it (high-cardinality identity). An explicit value wins; then an agent that names itself in the environment (AI_AGENT, CLAUDE_CODE_ENTRYPOINT — normalised to its leading segment, e.g. claude-code); then $USER/$LOGNAME; else 'unknown'. An agent comes before the OS user: filing an agent's work under a person's name is a wrong answer, not a missing one."
+            "description": "Who ran it (high-cardinality identity). An explicit value wins; then an agent that names itself in the environment (AI_AGENT — normalised to its leading segment, e.g. claude-code); then $USER/$LOGNAME; else 'unknown'. An agent comes before the OS user: filing an agent's work under a person's name is a wrong answer, not a missing one."
           },
           "actor_kind": {
             "type": "string",
@@ -1014,7 +1019,7 @@
           },
           "actor": {
             "type": "string",
-            "description": "Who ran it (high-cardinality identity). An explicit value wins; then an agent that names itself in the environment (AI_AGENT, CLAUDE_CODE_ENTRYPOINT — normalised to its leading segment, e.g. claude-code); then $USER/$LOGNAME; else 'unknown'. An agent comes before the OS user: filing an agent's work under a person's name is a wrong answer, not a missing one."
+            "description": "Who ran it (high-cardinality identity). An explicit value wins; then an agent that names itself in the environment (AI_AGENT — normalised to its leading segment, e.g. claude-code); then $USER/$LOGNAME; else 'unknown'. An agent comes before the OS user: filing an agent's work under a person's name is a wrong answer, not a missing one."
           },
           "actor_kind": {
             "type": "string",
@@ -1124,7 +1129,7 @@
           },
           "actor": {
             "type": "string",
-            "description": "The name the attaching client claimed for itself (claude-code, deploy-bot, ...), carried on the attach request. Unverified by construction: the ledger records the claim as a claim, next to the kernel's observation, and leaves believing to the reader. Absent means nobody claimed anything; the daemon does not fill it in from the OS user name, which is already in peer_uid. Only a name is carried, never a category. Resolution on the client: AUDIT_ACTOR, then the traces AI_AGENT and CLAUDE_CODE_ENTRYPOINT. Spelled like the shell's own ledger, so the two can be joined on berthd_session without translating the column; older records spell it claimed_actor."
+            "description": "The name the attaching client claimed for itself (claude-code, deploy-bot, ...), carried on the attach request. Unverified by construction: the ledger records the claim as a claim, next to the kernel's observation, and leaves believing to the reader. Absent means nobody claimed anything; the daemon does not fill it in from the OS user name, which is already in peer_uid. Only a name is carried, never a category. Resolution on the client: AUDIT_ACTOR, then the generic AI_AGENT. Spelled like the shell's own ledger, so the two can be joined on berthd_session without translating the column; older records spell it claimed_actor."
           },
           "claimed_actor": {
             "type": "string",
@@ -1132,11 +1137,11 @@
           },
           "actor_src": {
             "type": "string",
-            "description": "Where the claimed name came from on the client. The shipped clients (berth, argotty) send one of: audit_actor (the environment set AUDIT_ACTOR, the name an administrator sets); agent (a self-declaration a tool leaves in the environment: AI_AGENT, CLAUDE_CODE_ENTRYPOINT). Older records may carry hsh_actor (the retired HSH_ACTOR variable). Not a closed list: it is part of the client's claim and recorded as received, not corrected. Absent when no name was claimed. Older records spell it claimed_actor_src."
+            "description": "Where the claimed name came from on the client. The shipped clients (berth, argotty) send one of: audit_actor (the environment set AUDIT_ACTOR, the name an administrator sets); agent (a self-declaration a tool leaves in the environment: AI_AGENT). Older records may carry hsh_actor (the retired HSH_ACTOR variable). Not a closed list: it is part of the client's claim and recorded as received, not corrected. Absent when no name was claimed. Older records spell it claimed_actor_src."
           },
           "claimed_actor_src": {
             "type": "string",
-            "description": "Older spelling of actor_src; no producer writes it any more. Where the claimed name came from on the client. The shipped clients (berth, argotty) send one of: audit_actor (the environment set AUDIT_ACTOR, the name an administrator sets); agent (a self-declaration a tool leaves in the environment: AI_AGENT, CLAUDE_CODE_ENTRYPOINT). Older records may carry hsh_actor (the retired HSH_ACTOR variable). Not a closed list: it is part of the client's claim and recorded as received, not corrected. Absent when no name was claimed."
+            "description": "Older spelling of actor_src; no producer writes it any more. Where the claimed name came from on the client. The shipped clients (berth, argotty) send one of: audit_actor (the environment set AUDIT_ACTOR, the name an administrator sets); agent (a self-declaration a tool leaves in the environment: AI_AGENT). Older records may carry hsh_actor (the retired HSH_ACTOR variable). Not a closed list: it is part of the client's claim and recorded as received, not corrected. Absent when no name was claimed."
           },
           "client": {
             "type": "string",
@@ -1246,7 +1251,7 @@
           },
           "actor": {
             "type": "string",
-            "description": "The name the attaching client claimed for itself (claude-code, deploy-bot, ...), carried on the attach request. Unverified by construction: the ledger records the claim as a claim, next to the kernel's observation, and leaves believing to the reader. Absent means nobody claimed anything; the daemon does not fill it in from the OS user name, which is already in peer_uid. Only a name is carried, never a category. Resolution on the client: AUDIT_ACTOR, then the traces AI_AGENT and CLAUDE_CODE_ENTRYPOINT. Spelled like the shell's own ledger, so the two can be joined on berthd_session without translating the column; older records spell it claimed_actor."
+            "description": "The name the attaching client claimed for itself (claude-code, deploy-bot, ...), carried on the attach request. Unverified by construction: the ledger records the claim as a claim, next to the kernel's observation, and leaves believing to the reader. Absent means nobody claimed anything; the daemon does not fill it in from the OS user name, which is already in peer_uid. Only a name is carried, never a category. Resolution on the client: AUDIT_ACTOR, then the generic AI_AGENT. Spelled like the shell's own ledger, so the two can be joined on berthd_session without translating the column; older records spell it claimed_actor."
           },
           "claimed_actor": {
             "type": "string",
@@ -1254,11 +1259,11 @@
           },
           "actor_src": {
             "type": "string",
-            "description": "Where the claimed name came from on the client. The shipped clients (berth, argotty) send one of: audit_actor (the environment set AUDIT_ACTOR, the name an administrator sets); agent (a self-declaration a tool leaves in the environment: AI_AGENT, CLAUDE_CODE_ENTRYPOINT). Older records may carry hsh_actor (the retired HSH_ACTOR variable). Not a closed list: it is part of the client's claim and recorded as received, not corrected. Absent when no name was claimed. Older records spell it claimed_actor_src."
+            "description": "Where the claimed name came from on the client. The shipped clients (berth, argotty) send one of: audit_actor (the environment set AUDIT_ACTOR, the name an administrator sets); agent (a self-declaration a tool leaves in the environment: AI_AGENT). Older records may carry hsh_actor (the retired HSH_ACTOR variable). Not a closed list: it is part of the client's claim and recorded as received, not corrected. Absent when no name was claimed. Older records spell it claimed_actor_src."
           },
           "claimed_actor_src": {
             "type": "string",
-            "description": "Older spelling of actor_src; no producer writes it any more. Where the claimed name came from on the client. The shipped clients (berth, argotty) send one of: audit_actor (the environment set AUDIT_ACTOR, the name an administrator sets); agent (a self-declaration a tool leaves in the environment: AI_AGENT, CLAUDE_CODE_ENTRYPOINT). Older records may carry hsh_actor (the retired HSH_ACTOR variable). Not a closed list: it is part of the client's claim and recorded as received, not corrected. Absent when no name was claimed."
+            "description": "Older spelling of actor_src; no producer writes it any more. Where the claimed name came from on the client. The shipped clients (berth, argotty) send one of: audit_actor (the environment set AUDIT_ACTOR, the name an administrator sets); agent (a self-declaration a tool leaves in the environment: AI_AGENT). Older records may carry hsh_actor (the retired HSH_ACTOR variable). Not a closed list: it is part of the client's claim and recorded as received, not corrected. Absent when no name was claimed."
           },
           "client": {
             "type": "string",
@@ -1726,7 +1731,7 @@
           },
           "actor": {
             "type": "string",
-            "description": "Who ran it (high-cardinality identity). An administrator-set name ($AUDIT_ACTOR) wins; then an agent that names itself in the environment (AI_AGENT, CLAUDE_CODE_ENTRYPOINT — normalised to its leading segment, e.g. claude-code); then $USER/$LOGNAME; else 'unknown'. The agent comes before the OS user so that an agent's work is not filed under a person's name. Older records may carry a name taken from $HSH_ACTOR."
+            "description": "Who ran it (high-cardinality identity). An administrator-set name ($AUDIT_ACTOR) wins; then an agent that names itself in the environment (AI_AGENT — normalised to its leading segment, e.g. claude-code); then $USER/$LOGNAME; else 'unknown'. The agent comes before the OS user so that an agent's work is not filed under a person's name. Older records may carry a name taken from $HSH_ACTOR."
           },
           "actor_kind": {
             "type": "string",
@@ -1810,7 +1815,7 @@
       }
     },
     "rheon:rewrite": {
-      "description": "hsh's Rheon mode (HSH_RHEON; HSH_FLUX is read too) rewrote a pipeline before running it (hsh journal). It records the shell's own act of rewriting, not the data the inserted stages emitted. The cmd record keeps the line as typed; this record puts the typed and the effective shapes side by side, because their difference is itself the fact. Written for every origin (interactive, -c, script, stdin) except inside internal structure (.hshrc, source, PROMPT_COMMAND) — the same boundary below which cmd and fs:source write nothing. One record per distinct rewrite per cmd: a loop that rewrites the same pipeline three times writes one record, so the number of rewrites is not recorded. Nothing about a rewrite is shown on screen; this record is where it is kept.",
+      "description": "hsh's Rheon mode (HSH_RHEON) rewrote a pipeline before running it (hsh journal). It records the shell's own act of rewriting, not the data the inserted stages emitted. The cmd record keeps the line as typed; this record puts the typed and the effective shapes side by side, because their difference is itself the fact. Written for every origin (interactive, -c, script, stdin) except inside internal structure (.hshrc, source, PROMPT_COMMAND) — the same boundary below which cmd and fs:source write nothing. One record per distinct rewrite per cmd: a loop that rewrites the same pipeline three times writes one record, so the number of rewrites is not recorded. Nothing about a rewrite is shown on screen; this record is where it is kept.",
       "schema": {
         "type": "object",
         "properties": {
@@ -1854,7 +1859,7 @@
           },
           "actor": {
             "type": "string",
-            "description": "Who ran it (high-cardinality identity). An administrator-set name ($AUDIT_ACTOR) wins; then an agent that names itself in the environment (AI_AGENT, CLAUDE_CODE_ENTRYPOINT — normalised to its leading segment, e.g. claude-code); then $USER/$LOGNAME; else 'unknown'. The agent comes before the OS user so that an agent's work is not filed under a person's name. Older records may carry a name taken from $HSH_ACTOR."
+            "description": "Who ran it (high-cardinality identity). An administrator-set name ($AUDIT_ACTOR) wins; then an agent that names itself in the environment (AI_AGENT — normalised to its leading segment, e.g. claude-code); then $USER/$LOGNAME; else 'unknown'. The agent comes before the OS user so that an agent's work is not filed under a person's name. Older records may carry a name taken from $HSH_ACTOR."
           },
           "actor_kind": {
             "type": "string",
@@ -1886,80 +1891,8 @@
       }
     },
     "flux:rewrite": {
-      "description": "The earlier name of rheon:rewrite. Older records spell it flux:rewrite; the payload is the same.",
-      "schema": {
-        "type": "object",
-        "properties": {
-          "typed": {
-            "type": "string",
-            "description": "The pipeline before the rewrite, rendered back from the parsed AST — whitespace is normalised, so it is not byte-for-byte what was typed. The literal typed line is the `cmd` of the cmd:run named by cmd_id."
-          },
-          "effective": {
-            "type": "string",
-            "description": "The pipeline that actually ran, rendered the same way, with the inserted stages in place and the original `!` restored."
-          },
-          "inserted": {
-            "type": "array",
-            "items": { "type": "string" },
-            "description": "The stages the shell inserted, in pipeline order (e.g. [\"sig --no-journal\", \"unsig\"])."
-          },
-          "cwd": {
-            "type": "string",
-            "description": "Working directory at execution time"
-          },
-          "cwd_src": {
-            "type": "string",
-            "enum": ["undeclared"],
-            "description": "Present only when the host never declared a logical working directory, so cwd is the process's physical one rather than the path the user sees: the value is undeclared. Absent when the host declared it."
-          },
-          "origin": {
-            "type": "string",
-            "enum": [
-              "interactive",
-              "command",
-              "script",
-              "stdin",
-              "unknown"
-            ],
-            "description": "How the shell was invoked (interactive REPL, -c, script file, stdin script)"
-          },
-          "origin_src": {
-            "type": "string",
-            "enum": ["undeclared"],
-            "description": "Present only when the host never declared how the shell was invoked, so origin fell back to unknown: the value is undeclared. Absent when declared."
-          },
-          "actor": {
-            "type": "string",
-            "description": "Who ran it (high-cardinality identity). An administrator-set name ($AUDIT_ACTOR) wins; then an agent that names itself in the environment (AI_AGENT, CLAUDE_CODE_ENTRYPOINT — normalised to its leading segment, e.g. claude-code); then $USER/$LOGNAME; else 'unknown'. The agent comes before the OS user so that an agent's work is not filed under a person's name. Older records may carry a name taken from $HSH_ACTOR."
-          },
-          "actor_kind": {
-            "type": "string",
-            "enum": [
-              "human",
-              "agent",
-              "ci",
-              "service",
-              "unknown"
-            ],
-            "description": "Low-cardinality classification of actor for aggregation. A host setting it per pane wins; then 'agent' if an agent names itself in the environment; then 'ci' if $CI is truthy; else the field is absent. Every value is a claim someone makes. 'unknown' and 'human' are retired and no longer emitted; older records may carry them, which is why the enum keeps them. Who was actually present is carried by observers instead: attach records (from socket peer credentials) and uid / auid on session:start."
-          },
-          "cmd_id": {
-            "type": ["string", "null"],
-            "description": "The id of the innermost cmd:run this rewrite happened in, to join the two. null when no command span was open on that thread."
-          },
-          "ts": {
-            "type": "string",
-            "format": "date-time",
-            "description": "When the rewrite happened, on the producer's clock (before the rewritten pipeline ran). See spec/PROTOCOL_v1.md 2.05."
-          },
-          "dialect": {
-            "type": "string",
-            "enum": ["bash", "sh", "hermes"],
-            "description": "Which dialect executed the line. See cmd:run.dialect for the full contract."
-          }
-        },
-        "required": ["typed", "effective", "inserted"]
-      }
+      "description": "Retired: the earlier name of rheon:rewrite. Older records spell it flux:rewrite with the same payload; no producer writes it any more. Read such a record as rheon:rewrite (spec/PROTOCOL_v1.md 6.2).",
+      "replaced_by": "rheon:rewrite"
     },
     "job:started": {
       "description": "A job was put in the background (hsh journal). The shell translates its internal job-table vocabulary into these names when it writes the journal. Older journals may carry earlier names with an underscore (such as job:job_started), which §4 forbids; a strict validator rejects them.",
@@ -1988,7 +1921,7 @@
           },
           "actor": {
             "type": "string",
-            "description": "Who ran it (high-cardinality identity). An administrator-set name ($AUDIT_ACTOR) wins; then an agent that names itself in the environment (AI_AGENT, CLAUDE_CODE_ENTRYPOINT — normalised to its leading segment, e.g. claude-code); then $USER/$LOGNAME; else 'unknown'. The agent comes before the OS user so that an agent's work is not filed under a person's name. Older records may carry a name taken from $HSH_ACTOR."
+            "description": "Who ran it (high-cardinality identity). An administrator-set name ($AUDIT_ACTOR) wins; then an agent that names itself in the environment (AI_AGENT — normalised to its leading segment, e.g. claude-code); then $USER/$LOGNAME; else 'unknown'. The agent comes before the OS user so that an agent's work is not filed under a person's name. Older records may carry a name taken from $HSH_ACTOR."
           },
           "actor_kind": {
             "type": "string",
@@ -3260,7 +3193,8 @@
           "dest": { "type": ["string", "null"], "description": "move only: where it went." },
           "lines_written": { "type": "integer" },
           "bytes_written": { "type": "integer" },
-          "timestamp": { "type": "string", "format": "date-time" }
+          "ts": { "type": "string", "format": "date-time", "description": "When rheon-write wrote the record (spec PROTOCOL_v1 2.05). RFC 3339, six fractional digits, Z." },
+          "timestamp": { "type": "string", "format": "date-time", "description": "Legacy spelling of `ts` (rheon-write before 2026-11). No longer emitted; kept so archived records still parse. See spec/PROTOCOL_v1.md 2.05." }
         },
         "required": ["path"]
       }
@@ -3276,7 +3210,8 @@
           "dest": { "type": ["string", "null"], "description": "move only: where it went." },
           "lines_written": { "type": "integer" },
           "bytes_written": { "type": "integer" },
-          "timestamp": { "type": "string", "format": "date-time" }
+          "ts": { "type": "string", "format": "date-time", "description": "When rheon-write wrote the record (spec PROTOCOL_v1 2.05). RFC 3339, six fractional digits, Z." },
+          "timestamp": { "type": "string", "format": "date-time", "description": "Legacy spelling of `ts` (rheon-write before 2026-11). No longer emitted; kept so archived records still parse. See spec/PROTOCOL_v1.md 2.05." }
         },
         "required": ["path"]
       }
@@ -3292,7 +3227,8 @@
           "dest": { "type": ["string", "null"], "description": "move only: where it went." },
           "lines_written": { "type": "integer" },
           "bytes_written": { "type": "integer" },
-          "timestamp": { "type": "string", "format": "date-time" }
+          "ts": { "type": "string", "format": "date-time", "description": "When rheon-write wrote the record (spec PROTOCOL_v1 2.05). RFC 3339, six fractional digits, Z." },
+          "timestamp": { "type": "string", "format": "date-time", "description": "Legacy spelling of `ts` (rheon-write before 2026-11). No longer emitted; kept so archived records still parse. See spec/PROTOCOL_v1.md 2.05." }
         },
         "required": ["path"]
       }
@@ -3308,7 +3244,8 @@
           "dest": { "type": ["string", "null"], "description": "move only: where it went." },
           "lines_written": { "type": "integer" },
           "bytes_written": { "type": "integer" },
-          "timestamp": { "type": "string", "format": "date-time" }
+          "ts": { "type": "string", "format": "date-time", "description": "When rheon-write wrote the record (spec PROTOCOL_v1 2.05). RFC 3339, six fractional digits, Z." },
+          "timestamp": { "type": "string", "format": "date-time", "description": "Legacy spelling of `ts` (rheon-write before 2026-11). No longer emitted; kept so archived records still parse. See spec/PROTOCOL_v1.md 2.05." }
         },
         "required": ["path"]
       }

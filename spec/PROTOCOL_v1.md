@@ -83,6 +83,9 @@ because `modified` reads as "when it was made".
 - Neither is required. A high-volume producer may omit `ts` — a scan emitting
   half a million records in three seconds writes the same value on every line —
   and a collector's `rx_ts` then supplies the floor.
+- The **moment** such a scan was taken is written **once**, as `ts` on its
+  terminator (CLI_PROFILE §2.9). It is not the time of any one record's event, and
+  an attribute of the subject (a file's `modified`) is a third, separate fact.
 
 **Format**: RFC 3339 with an explicit offset. A producer **SHOULD** write at
 least microseconds — six fractional digits or more,
@@ -297,6 +300,27 @@ up to the consumer; `unsig` falls back to `line`, then `path`, then the record a
 is. ⚠️ An unregistered type has no template by construction, which is one more reason
 to register a type before emitting it.
 
+### 6.2 `replaced_by` — a retired name (optional)
+
+A `type:event` that has been renamed keeps one entry under its old name, so that
+records already written under it stay known. That entry carries `replaced_by`, the
+current name, and no `schema` or `plain` of its own:
+
+```json
+"flux:rewrite": {
+  "description": "Retired: the earlier name of rheon:rewrite. …",
+  "replaced_by": "rheon:rewrite"
+}
+```
+
+- A producer MUST NOT write a retired name; it writes the name in `replaced_by`.
+- A consumer reads a record under a retired name as the entry named by
+  `replaced_by` — its `schema`, `plain` and meaning. The payload is the same; only
+  the spelling changed.
+- `replaced_by` names an entry that is not itself retired (one step, no chains).
+- Stored records are never rewritten to the new name. A sealed journal keeps the
+  spelling it was written with, which is why the retired entry stays.
+
 ## 7. Validation philosophy
 
 **Syntax strict, semantics loose.**
@@ -305,7 +329,8 @@ to register a type before emitting it.
 2. Require `v`, `source`, `type`, `event`.
 3. Require `v == 1`.
 4. Check `type` / `event` format (lowercase / digits / `-`).
-5. Look up `type:event` in the registry.
+5. Look up `type:event` in the registry (a retired name resolves to its
+   `replaced_by`, §6.2).
 6. If found, require the schema's `required` fields.
 7. Unknown `type:event` → **warn and continue** (do not reject).
 8. Unknown extra fields → allowed.

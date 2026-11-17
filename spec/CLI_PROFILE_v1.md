@@ -143,10 +143,14 @@ different input on every run, so its values differ by design. It does not get an
 exception from this rule; it makes the observation an input instead:
 
 - `--snapshot FILE` — observe as usual, print as usual, and also write what was
-  observed (the records printed, terminator included) to `FILE`.
+  observed (every record, terminator included) to `FILE`. When the arguments cut
+  what is printed (`--limit`), the snapshot still holds the whole observation: a
+  snapshot of the first page could not be paged.
 - `--from FILE` — do not observe: read an observation written by `--snapshot` and
   print it as if it had just been made (any selection the arguments ask for applies
-  as usual; the terminator keeps the observation's own time).
+  as usual; the terminator keeps the observation's own time — its `ts`, §2.9 — not
+  the time of the replay). A snapshot that is not whole (no terminator, or a count
+  that does not match) **MUST** be refused rather than replayed as if it were.
 
 With `--from`, this rule holds as written: the same observation and the same
 arguments give the same bytes. The manifest says the pipe observes (`observes`,
@@ -201,6 +205,20 @@ record whose `event` is `complete`.
   a producer that already ends with a summary (`{"type":"eye-stats",
   "event":"complete",…}`) is conformant as it stands.
 
+**A producer that observes the present** (§2.5, `observes` in PIPE_MANIFEST v1)
+**SHOULD** carry `ts` on its terminator: the moment the observation was taken, in the
+shape of PROTOCOL_v1 §2.05.2. A run of such a producer is one moment, and this is
+where the moment is written once instead of on every record (a scan that emits
+thousands of records in a second writes no `ts` on them, §2.05.2). Replayed with
+`--from`, the terminator keeps the observation's `ts`.
+
+- This is the **moment** a stream was taken. A record's own `ts` is the time **its
+  event** happened; a field such as `modified` is an attribute of the subject.
+  The three are different facts and do not share a field.
+- A cut stream (below) has no terminator, so the moment does not reach a reader of
+  a cut page. A command that keeps the whole result to page through it keeps the
+  terminator, and the moment with it, for the last page.
+
 A filter **MUST NOT** carry a terminator through as data — it must not sort,
 score or reshape it — and **MUST** emit its own **only if it saw one**.
 That is what makes the absence travel: a truncated upstream produces no
@@ -211,6 +229,29 @@ emitted enough) never sees its upstream's terminator when it cuts, so by the rul
 above it emits none. It **MUST** instead end with a record of its own `type` whose
 `event` is `truncated`, carrying `count` (records emitted) and `limit` (the cut),
 and **SHOULD** say so in one line on stderr (§2.4).
+
+**A producer that cuts its own output** (a `--limit` that left records out) ends the
+same way, and so does a command that caps a stream it passes on (a bridge that
+returns at most so many characters). Ending with `complete` after printing part of
+what it had is the shape this section prevents, whoever does the cutting.
+
+- `limit` is a **number of records**. A command that cuts by something else — characters,
+  bytes — **MUST NOT** write that number as `limit`; it writes it under a name that
+  carries the unit (`limit_chars`, `limit_bytes`) instead. The same name with a
+  different unit is a number a reader will add to the wrong thing.
+- The mark **MAY** say how much there was: **`total`**, the number of records before
+  the cut, or **`total_at_least`**, a lower bound when the command stopped looking
+  (it searched up to a cap and the cap was reached). It writes **one of the two, or
+  neither**. Neither means **not counted** — never zero.
+  - Count records only: the upstream's terminator and an upstream `truncated` mark
+    are not records.
+  - A `head`-like filter stops reading when it has emitted enough (§2.1), so it cannot
+    know how many were left, and reading on to find out would undo the cut. It writes
+    neither.
+  - A command that saw its whole input before choosing — it walked everything to sort,
+    or it holds the whole output — has the number for free and **SHOULD** write `total`.
+    When its input was itself cut (no terminator from upstream), the number is not the
+    size of the whole, and it writes neither.
 
 - `truncated` is **not a terminator** — a consumer that requires completion stops,
   and every filter downstream emits no terminator of its own. That is the point:

@@ -74,9 +74,12 @@ catches up the ledger files the unknown tool as a person. Record **raw names** a
 leave classification to the reader, who can update a query without changing any
 ledger.
 
-Self-declarations that agents set for themselves (`AI_AGENT`, and
-`CLAUDE_CODE_ENTRYPOINT` as the one vendor-specific fallback admitted) are still
-accepted — as **declarations**, with their own `*_src` value.
+The generic self-declaration an agent sets for itself (`AI_AGENT`) is still
+accepted — as a **declaration**, with its own `*_src` value. Vendor-specific
+spellings (for example `CLAUDE_CODE_ENTRYPOINT`, `ANTIGRAVITY_AGENT`,
+`CODEX_TOOL_CALL_ID`) are **not** read: keeping up with each vendor is a race a
+producer cannot win, and they are claims, not observations. Whoever wants records
+split by who ran them sets `AUDIT_ACTOR`.
 
 ### 2.3 Empty means nobody declared
 
@@ -192,7 +195,7 @@ Pick each variable explicitly. A prefix such as `CLAUDE_*` also matches secrets
 - A neutral name, read by every producer that follows this policy. **It is the only
   variable an administrator needs to know.**
 - Resolution order for the claimed name:
-  `AUDIT_ACTOR` → tool self-declaration (`AI_AGENT` → `CLAUDE_CODE_ENTRYPOINT`) → none.
+  `AUDIT_ACTOR` → tool self-declaration (`AI_AGENT`) → none.
 - A reader may still meet `hsh_actor` as an `actor_src` value. It came from an older,
   product-specific variable that no producer reads any more; the ledger is
   append-only, so the value survives in old records. Retiring an input is not the
